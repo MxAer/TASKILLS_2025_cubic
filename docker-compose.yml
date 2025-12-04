@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Database
+  db:
+    image: postgres:15-alpine
+    container_name: dice_db
+    environment:
+      POSTGRES_USER: dice_user
+      POSTGRES_PASSWORD: dice_password
+      POSTGRES_DB: dice_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+
+  # Redis (Cache & Pub/Sub)
+  redis:
+    image: redis:7-alpine
+    container_name: dice_redis
+    ports:
+      - "6379:6379"
+
+  # Backend (Go)
+  backend:
+    build: ./backend
+    container_name: dice_backend
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://dice_user:dice_password@db:5432/dice_db?sslmode=disable
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./backend:/app
+
+volumes:
+  postgres_data:
