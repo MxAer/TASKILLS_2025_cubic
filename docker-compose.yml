@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Database
+  # --- DATABASE ---
   db:
     image: postgres:15-alpine
     container_name: dice_db
@@ -15,14 +15,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d
 
-  # Redis (Cache & Pub/Sub)
+  # --- REDIS ---
   redis:
     image: redis:7-alpine
     container_name: dice_redis
     ports:
       - "6379:6379"
 
-  # Backend (Go)
+  # --- BACKEND (GO) ---
   backend:
     build: ./backend
     container_name: dice_backend
@@ -35,7 +35,23 @@ services:
       - db
       - redis
     volumes:
-      - ./backend:/app
+      # Монтируем код, чтобы (в будущем) настроить Air для Go Hot Reload
+      - ./backend:/app 
+
+  # --- FRONTEND (VUE) ---
+  frontend:
+    build: ./frontend
+    container_name: dice_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app             # Связь с локальной папкой для редактирования
+      - /app/node_modules           # Изоляция зависимостей контейнера
+    environment:
+      - CHOKIDAR_USEPOLLING=true    # Фикс для Hot Reload на некоторых системах
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
+
